@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>kyriosMICA · T₃-Net & Lab · Plateforme Unifiée</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --void:   #02040A;
+  --gold:   #C9972A;
+  --cyan:   #22D3EE;
+  --purple: #A78BFA;
+  --green:  #22C55E;
+  --muted:  rgba(255,255,255,.35);
+  --dim:    rgba(255,255,255,.12);
+  --border: rgba(255,255,255,.07);
+  --ff:     'IBM Plex Mono', monospace;
+  --hdr:    52px;
+  --tab:    42px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--void);
+  color: rgba(255,255,255,.88);
+  font-family: var(--ff);
+  overflow: hidden; /* Portal controls scroll via iframes */
+}
+
+/* ── Grid background ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(34,211,238,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,211,238,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ══════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════ */
+#header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--hdr);
+  background: rgba(2,4,10,.98);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 100;
+}
+
+.hdr-brand {
+  display: flex; align-items: center; gap: 10px;
+}
+.hdr-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 15px; letter-spacing: .5px;
+}
+.hdr-logo span { color: var(--gold); }
+.hdr-sub {
+  font-size: 8px; letter-spacing: 3px; color: var(--muted);
+  text-transform: uppercase;
+}
+.hdr-links {
+  display: flex; align-items: center; gap: 12px;
+}
+.hdr-link {
+  font-size: 9px; letter-spacing: 1px; text-decoration: none;
+  color: var(--muted); transition: color .2s;
+}
+.hdr-link:hover { color: var(--cyan); }
+.hdr-badge {
+  font-size: 8px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 2px;
+  background: rgba(201,151,42,.12);
+  border: 1px solid rgba(201,151,42,.3);
+  color: var(--gold);
+}
+
+/* ══════════════════════════════════════════════
+   TAB BAR
+══════════════════════════════════════════════ */
+#tabbar {
+  position: fixed;
+  top: var(--hdr); left: 0; right: 0;
+  height: var(--tab);
+  background: rgba(2,4,10,.96);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: stretch;
+  padding: 0 16px;
+  z-index: 99;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#tabbar::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 18px;
+  border: none; border-bottom: 2px solid transparent;
+  background: transparent; cursor: pointer;
+  font-family: var(--ff);
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap;
+  transition: all .2s;
+  position: relative;
+}
+.tab-btn:hover { color: rgba(255,255,255,.6); }
+.tab-btn.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+.tab-btn.active.purple { color: var(--purple); border-bottom-color: var(--purple); }
+.tab-btn.active.gold   { color: var(--gold);   border-bottom-color: var(--gold); }
+
+.tab-badge {
+  font-size: 7px; padding: 1px 5px; border-radius: 2px;
+  background: rgba(34,211,238,.1);
+  border: 1px solid rgba(34,211,238,.2);
+  color: rgba(34,211,238,.6); letter-spacing: 1px;
+}
+.lock-icon {
+  font-size: 8px; opacity: .4;
+  transition: opacity .3s;
+}
+.unlocked .lock-icon { opacity: 0; }
+
+/* ══════════════════════════════════════════════
+   IFRAME PANELS
+══════════════════════════════════════════════ */
+#panels {
+  position: fixed;
+  top: calc(var(--hdr) + var(--tab));
+  left: 0; right: 0; bottom: 0;
+  z-index: 1;
+}
+
+.panel-iframe {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border: none;
+  display: none;
+  background: var(--void);
+}
+.panel-iframe.active { display: block; }
+
+/* Loading state */
+.panel-loader {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--void);
+  pointer-events: none;
+  transition: opacity .4s;
+}
+.panel-loader.hidden { opacity: 0; }
+.loader-ring {
+  width: 36px; height: 36px;
+  border: 2px solid var(--border);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin-bottom: 14px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text {
+  font-size: 9px; letter-spacing: 3px;
+  color: var(--muted); text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════
+   ACCESS MODAL
+══════════════════════════════════════════════ */
+#access-modal {
+  display: none;
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(2,4,10,.97);
+  backdrop-filter: blur(24px);
+  align-items: center; justify-content: center;
+}
+#access-modal.open { display: flex; }
+
+.modal-box {
+  background: #080E1C;
+  border: 1px solid rgba(34,211,238,.18);
+  border-radius: 12px;
+  padding: 40px 36px;
+  max-width: 340px; width: 92%;
+  text-align: center;
+}
+.modal-logo {
+  margin: 0 auto 20px;
+  width: 40px; height: 40px;
+}
+.modal-title {
+  font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 10px; color: var(--muted);
+  line-height: 1.7; margin-bottom: 24px;
+}
+.modal-input {
+  width: 100%;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(34,211,238,.2);
+  border-radius: 5px;
+  padding: 12px 16px;
+  color: #F1F5F9;
+  font-family: var(--ff);
+  font-size: 15px; letter-spacing: 4px; text-align: center;
+  outline: none; box-sizing: border-box;
+  transition: border-color .2s;
+}
+.modal-input:focus { border-color: rgba(34,211,238,.5); }
+.modal-err {
+  font-size: 9px; color: #EF4444;
+  min-height: 14px; margin: 8px 0;
+  letter-spacing: 1px;
+}
+.modal-actions { display: flex; gap: 8px; }
+.modal-btn-primary {
+  flex: 1; padding: 11px;
+  background: linear-gradient(135deg,rgba(34,211,238,.15),rgba(201,151,42,.08));
+  border: 1px solid rgba(34,211,238,.3);
+  border-radius: 4px; cursor: pointer;
+  font-family: var(--ff); font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--cyan); transition: all .2s;
+}
+.modal-btn-primary:hover {
+  background: linear-gradient(135deg,rgba(34,211,238,.25),rgba(201,151,42,.15));
+}
+.modal-btn-close {
+  padding: 11px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px; cursor: pointer;
+  font-family: var(--ff); font-size: 13px;
+  color: var(--muted); transition: border-color .2s;
+}
+.modal-btn-close:hover { border-color: rgba(255,255,255,.25); }
+.modal-footer {
+  margin-top: 16px;
+  font-size: 8px; color: rgba(255,255,255,.12);
+  letter-spacing: 1px; line-height: 1.8;
+}
+
+/* ══════════════════════════════════════════════
+   CROSS-FRAME MESSAGE NOTIFICATION
+══════════════════════════════════════════════ */
+#xframe-notif {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  z-index: 200;
+  background: rgba(10,16,32,.97);
+  border: 1px solid rgba(167,139,250,.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  max-width: 260px;
+  font-size: 9px; letter-spacing: 1px;
+  color: rgba(255,255,255,.6);
+  line-height: 1.7;
+  display: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+#xframe-notif.show { display: block; animation: slideUp .3s ease; }
+@keyframes slideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════ -->
+<div id="header">
+  <div class="hdr-brand">
+    <svg width="28" height="28" viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#E8B84B"/>
+          <stop offset="100%" style="stop-color:#C9972A"/>
+        </linearGradient>
+        <linearGradient id="lg2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#22D3EE"/>
+          <stop offset="100%" style="stop-color:#0891B2"/>
+        </linearGradient>
+      </defs>
+      <polygon points="50,8 86,29 86,71 50,92 14,71 14,29"
+        fill="none" stroke="url(#lg1)" stroke-width="2"/>
+      <polygon points="50,8 86,71 14,71"
+        fill="rgba(201,151,42,.05)" stroke="url(#lg1)" stroke-width="1.5"/>
+      <polygon points="86,29 50,92 14,29"
+        fill="rgba(8,145,178,.05)" stroke="url(#lg2)" stroke-width="1.5"/>
+      <circle cx="50" cy="50" r="5" fill="url(#lg2)" opacity=".85"/>
+    </svg>
+    <div>
+      <div class="hdr-logo">kyrios<span>MICA</span></div>
+      <div class="hdr-sub">Decoding Life. Encoding the Future.</div>
+    </div>
+  </div>
+  <div class="hdr-links">
+    <span class="hdr-badge">EVK · ERK · MRK</span>
+    <a href="https://kyriosmica.com" target="_blank" class="hdr-link">
+      kyriosmica.com ↗
+    </a>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB BAR
+════════════════════════════════════════════ -->
+<div id="tabbar">
+  <button class="tab-btn active" id="tab-t3net" onclick="showPanel('t3net')">
+    <span>&#x2B21;</span>
+    <span>T&#x2083;-Net · IA</span>
+    <span class="tab-badge">PUBLIC</span>
+  </button>
+  <button class="tab-btn" id="tab-lab" onclick="showPanel('lab')">
+    <span>&#x1F52C;</span>
+    <span>Lab Avanc&#233;</span>
+    <span class="lock-icon" id="lock-lab">&#x1F512;</span>
+  </button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     IFRAME PANELS
+     Les deux apps vivent dans leur propre contexte
+     — zéro conflit de variables ou d'IDs
+════════════════════════════════════════════ -->
+<div id="panels">
+
+  <!-- Panel T₃-Net -->
+  <div style="position:absolute;inset:0;display:block;" id="panel-t3net">
+    <div class="panel-loader" id="loader-t3net">
+      <div class="loader-ring"></div>
+      <div class="loader-text">Chargement T&#x2083;-Net...</div>
+    </div>
+    <iframe
+      id="iframe-t3net"
+      class="panel-iframe active"
+      src="t3net_app.html"
+      title="T₃-Net · kyriosMICA"
+      onload="onFrameLoad('t3net')"
+      allow="clipboard-write">
+    </iframe>
+  </div>
+
+  <!-- Panel Lab Avancé -->
+  <div style="position:absolute;inset:0;display:none;" id="panel-lab">
+    <div class="panel-loader" id="loader-lab">
+      <div class="loader-ring"></div>
+      <div class="loader-text">Chargement Lab...</div>
+    </div>
+    <iframe
+      id="iframe-lab"
+      class="panel-iframe"
+      src=""
+      title="Lab Avancé · kyriosMICA"
+      onload="onFrameLoad('lab')"
+      allow="clipboard-write">
+    </iframe>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════
+     ACCESS MODAL — Lab Avancé
+════════════════════════════════════════════ -->
+<div id="access-modal">
+  <div class="modal-box">
+
+    <svg class="modal-logo" viewBox="0 0 100 100">
+      <polygon points="50,8 86,29 86,71 50,92 14,71 14,29"
+        fill="none" stroke="rgba(201,151,42,.5)" stroke-width="2"/>
+      <circle cx="50" cy="50" r="5" fill="#22D3EE" opacity=".8"/>
+    </svg>
+
+    <div class="modal-title">&#x2B21; Lab Avanc&#233; &middot; kyriosMICA</div>
+    <div class="modal-sub">
+      Acc&#232;s r&#233;serv&#233; aux membres du Consortium<br/>
+      et partenaires de recherche.<br/>
+      <span style="font-size:8px;color:rgba(255,255,255,.2);">
+        Code disponible sur demande :
+        direction&#64;kyriosmica.com
+      </span>
+    </div>
+
+    <input
+      id="access-input"
+      type="password"
+      class="modal-input"
+      placeholder="Code d&#x27;acc&#232;s"
+      maxlength="20"
+      autocomplete="off"
+      onkeydown="if(event.key==='Enter') submitAccess()"/>
+
+    <div class="modal-err" id="access-err"></div>
+
+    <div class="modal-actions">
+      <button class="modal-btn-primary" onclick="submitAccess()">
+        Acc&#233;der &#x2192;
+      </button>
+      <button class="modal-btn-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+
+    <div class="modal-footer">
+      &#169; 2026 kyriosMICA &middot; Cyrille Egnon DAVOH &middot; B&#233;nin<br/>
+      Decoding Life. Encoding the Future.
+    </div>
+  </div>
+</div>
+
+<!-- Cross-frame notification -->
+<div id="xframe-notif"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  KYRIOSMICA PORTAL · Contrôleur de navigation
+//  Architecture : iframes isolées — zéro conflit DOM/JS
+//  © 2026 Cyrille Egnon DAVOH · kyriosMICA
+// ════════════════════════════════════════════════════════════════
+
+var LAB_CODE_KEY  = '_km_lab_session';
+var LAB_CODE_DEFAULT = 'KM-LAB-2026';
+var _pendingPanel    = null;
+var _pendingSeq      = null;   // séquence en attente d'envoi au Lab
+var _labReady        = false;  // Lab iframe a fini de charger
+var _labLoadStarted  = false;
+
+// ── Accès ──────────────────────────────────────────────────────
+function isLabUnlocked() {
+  return sessionStorage.getItem(LAB_CODE_KEY) === '1';
+}
+
+function getLabCode() {
+  return (localStorage.getItem('km_lab_code_custom') || LAB_CODE_DEFAULT).toUpperCase();
+}
+
+// ── Navigation ─────────────────────────────────────────────────
+function showPanel(name) {
+  if (name === 'lab' && !isLabUnlocked()) {
+    _pendingPanel = name;
+    openModal();
+    return;
+  }
+  activatePanel(name);
+}
+
+function activatePanel(name) {
+  // Mettre à jour les onglets
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.remove('active', 'purple', 'gold');
+  });
+  var tb = document.getElementById('tab-' + name);
+  if (tb) tb.classList.add('active');
+
+  // Afficher/masquer les panels
+  ['t3net', 'lab'].forEach(function(p) {
+    var panel = document.getElementById('panel-' + p);
+    if (panel) panel.style.display = (p === name) ? 'block' : 'none';
+  });
+
+  // Lazy-load Lab iframe au premier accès
+  if (name === 'lab' && !_labLoadStarted) {
+    _labLoadStarted = true;
+    var iframe = document.getElementById('iframe-lab');
+    if (iframe) {
+      iframe.src = 'qudits36_lab.html';
+      // La séquence sera envoyée dans onFrameLoad quand l'iframe sera prête
+    }
+  }
+
+  // Si Lab déjà prêt et séquence en attente → envoyer maintenant
+  if (name === 'lab' && _labReady && _pendingSeq) {
+    sendSeqToLab(_pendingSeq);
+    _pendingSeq = null;
+  }
+}
+
+// ── Envoyer la séquence à l'iframe Lab ─────────────────────────
+function sendSeqToLab(seq) {
+  var iframe = document.getElementById('iframe-lab');
+  if (!iframe || !iframe.contentWindow) return;
+  try {
+    iframe.contentWindow.postMessage({
+      type: 'injectSeq',
+      seq:  seq
+    }, '*');
+  } catch(e) {
+    console.warn('kyriosMICA Portal: postMessage to Lab failed', e);
+  }
+}
+
+// ── Callback : iframe chargée ───────────────────────────────────
+function onFrameLoad(name) {
+  // Masquer le loader
+  var loader = document.getElementById('loader-' + name);
+  if (loader) {
+    loader.style.opacity = '0';
+    setTimeout(function() { loader.style.display = 'none'; }, 350);
+  }
+  var iframe = document.getElementById('iframe-' + name);
+  if (iframe) iframe.classList.add('active');
+
+  if (name === 'lab') {
+    _labReady = true;
+    // S'il y a une séquence en attente, l'envoyer maintenant
+    if (_pendingSeq) {
+      // Petit délai pour laisser le Lab finir son init JS
+      setTimeout(function() {
+        sendSeqToLab(_pendingSeq);
+        _pendingSeq = null;
+      }, 300);
+    }
+  }
+}
+
+// ── Réception des messages des iframes ─────────────────────────
+window.addEventListener('message', function(event) {
+  var data = event.data;
+  if (!data || typeof data !== 'object') return;
+
+  // T3Net demande d'ouvrir le Lab avec une séquence
+  if (data.type === 'openLab') {
+    var seq  = data.seq  || '';
+    var pred = data.prediction || '';
+
+    // Stocker la séquence en attente
+    _pendingSeq = seq;
+
+    // Afficher notification
+    if (seq) {
+      showNotif(
+        '<strong style="color:#22D3EE;">' + seq.slice(0, 18) + (seq.length > 18 ? '…' : '') + '</strong><br/>' +
+        (pred ? 'Prédiction T&#x2083;-Net : <span style="color:#A78BFA;">' + pred + '</span>' : '') +
+        '<br/><span style="opacity:.5;">Ouverture du Lab…</span>'
+      );
+    }
+
+    // Naviguer vers le Lab (déverrouillage si nécessaire)
+    showPanel('lab');
+  }
+});
+
+// ── Modal d'accès ───────────────────────────────────────────────
+function openModal() {
+  var modal = document.getElementById('access-modal');
+  var inp   = document.getElementById('access-input');
+  var err   = document.getElementById('access-err');
+  if (!modal) return;
+  modal.classList.add('open');
+  if (err) err.textContent = '';
+  if (inp) { inp.value = ''; setTimeout(function(){ inp.focus(); }, 80); }
+}
+
+function closeModal() {
+  var modal = document.getElementById('access-modal');
+  if (modal) modal.classList.remove('open');
+  _pendingPanel = null;
+  // Ne pas effacer _pendingSeq — l'utilisateur peut encore entrer le code
+}
+
+function submitAccess() {
+  var inp  = document.getElementById('access-input');
+  var err  = document.getElementById('access-err');
+  if (!inp) return;
+  var code = inp.value.trim().toUpperCase();
+
+  if (!code) {
+    if (err) err.textContent = 'Entrez le code.';
+    return;
+  }
+
+  if (code === getLabCode()) {
+    // Accès accordé
+    sessionStorage.setItem(LAB_CODE_KEY, '1');
+    var modal = document.getElementById('access-modal');
+    if (modal) modal.classList.remove('open');
+
+    // Déverouiller visuellement
+    var lock = document.getElementById('lock-lab');
+    if (lock) lock.textContent = '';
+    var tabLab = document.getElementById('tab-lab');
+    if (tabLab) tabLab.classList.add('unlocked');
+
+    // Naviguer
+    var target = _pendingPanel || 'lab';
+    _pendingPanel = null;
+    activatePanel(target);
+  } else {
+    if (err) err.textContent = 'Code incorrect.';
+    if (inp) { inp.value = ''; inp.focus(); }
+  }
+}
+
+// ── Notification ───────────────────────────────────────────────
+var _notifTimer = null;
+function showNotif(html) {
+  var el = document.getElementById('xframe-notif');
+  if (!el) return;
+  el.innerHTML = html;
+  el.classList.add('show');
+  clearTimeout(_notifTimer);
+  _notifTimer = setTimeout(function() {
+    el.classList.remove('show');
+  }, 5000);
+}
+
+// ── Init ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  // Restaurer état déverrouillé
+  if (isLabUnlocked()) {
+    var lock  = document.getElementById('lock-lab');
+    var tabLab = document.getElementById('tab-lab');
+    if (lock)   lock.textContent = '';
+    if (tabLab) tabLab.classList.add('unlocked');
+  }
+
+  // URL param ?app=lab
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('app') === 'lab') {
+    showPanel('lab');
+  }
+
+  // Echap ferme le modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+});
+</script>
+</body>
