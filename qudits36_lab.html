@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Qudits-36 Lab · kyriosMICA</title>
-<meta name="description" content="Qudits-36 Scientific Interface — EVK, ERK, MRK analysis of DNA sequences. kyriosMICA Research Institute."/>
+<meta name="description" content="Qudits-36 Scientific Interface — EVK · ERK · MRK · kyriosMICA analysis of DNA sequences. kyriosMICA Research Institute."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet"/>
 <style>
@@ -2013,7 +2013,7 @@ main {
       <span class="panel-label">Active Modules</span>
       <div class="module-toggles">
         <div class="module-toggle on">
-          <span class="mt-label" style="color:var(--evk);">M1 · EVK / ERK / MRK</span>
+          <span class="mt-label" style="color:var(--evk);">M1 · EVK / ERK / MRK · kyriosMICA</span>
           <span class="mt-badge badge-on">Active</span>
         </div>
         <div class="module-toggle on">
@@ -2241,7 +2241,7 @@ main {
         <circle cx="50" cy="50" r="2" fill="rgba(255,255,255,.5)"/>
       </svg>
       <div class="empty-title">Enter a DNA sequence</div>
-      <div class="empty-sub">EVK · ERK · MRK · v2.0 · MP2/DFT + CHARMM36</div>
+      <div class="empty-sub">EVK · ERK · MRK · kyriosMICA v2.0 · CHARMM36</div>
     </div>
 
     <!-- Loading -->
@@ -5722,7 +5722,7 @@ document.addEventListener('keydown', e => {
     justify-content:space-between;gap:12px;flex-wrap:wrap;">
     <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;
                 letter-spacing:3px;color:rgba(201,151,42,.7);text-transform:uppercase;">
-      KM-DOC-008 · Qudits-36 · Manuscrit LaTeX arXiv-ready
+      KM-DOC-008 · Qudits-36 · kyriosMICA · Manuscrit LaTeX arXiv
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;
@@ -5906,8 +5906,8 @@ $\\{$A, T, G, C$\\}$ abstracts away the physical substrate that stabilizes the d
 helix: hydrogen bonds between complementary bases. We propose \\textbf{Qudits-36},
 a mathematical framework that models the discrete states of these hydrogen bonds
 using balanced ternary logic $\\mathcal{T}_3 = \\{-1, 0, +1\\}$. Three constructions
-are introduced: the \\textbf{Codon Vector Space (EVK)}, the \\textbf{Codon Resonance
-Space (ERK)}, and the \\textbf{Codon Resonance Matrix (MRK)}.
+are introduced: the \\textbf{KyriosMICA Vector Space (EVK) (EVK)}, the \\textbf{Codon Resonance
+Space (ERK)}, and the \\textbf{KyriosMICA Resonance Matrix (MRK) (MRK)}.
 
 The AT base pair (2 H-bonds) defines a space $\\mathcal{T}_3^2$ with 9 states; the
 CG pair (3 H-bonds) defines $\\mathcal{T}_3^3$ with 27 states. The codon space is
@@ -6037,7 +6037,7 @@ this hypothesis, to be tested by H-bond length trimodality analysis on
 high-resolution PDB structures (Hartigan dip test + Gaussian mixture modeling).
 
 % ════════════════════════════════════════════════════════════════
-\\section{EVK: Codon Vector Space}
+\\section{EVK: KyriosMICA Vector Space (EVK)}
 \\label{sec:evk}
 % ════════════════════════════════════════════════════════════════
 
@@ -6063,7 +6063,7 @@ V_{\\text{CG}} &= \\mathcal{T}_3^3, \\quad |V_{\\text{CG}}| = 27
 
 \\subsection{Codon Space as Direct Sum}
 
-\\begin{definition}[Codon Vector Space (EVK)]
+\\begin{definition}[KyriosMICA Vector Space (EVK) (EVK)]
 For a codon $B_1 B_2 B_3$:
 \\begin{equation}
 V_{\\text{codon}} = V_{B_1} \\oplus V_{B_2} \\oplus V_{B_3}
@@ -6093,7 +6093,7 @@ AT+CG+CG & $\\mathcal{T}_3^8$ & 8 & 6,561  & $\\times 103$ \\\\
 \\end{table}
 
 % ════════════════════════════════════════════════════════════════
-\\section{ERK: Codon Resonance Space}
+\\section{ERK: KyriosMICA Resonance Space (ERK)}
 \\label{sec:erk}
 % ════════════════════════════════════════════════════════════════
 
@@ -6128,13 +6128,13 @@ $P(-1) \\approx 14.7\\%$, $P(0) \\approx 56.4\\%$, $P(+1) \\approx 28.8\\%$.
 All three states are thermally accessible.
 
 % ════════════════════════════════════════════════════════════════
-\\section{MRK: Codon Resonance Matrix}
+\\section{MRK: KyriosMICA Resonance Matrix (MRK)}
 \\label{sec:mrk}
 % ════════════════════════════════════════════════════════════════
 
 \\subsection{Block Structure}
 
-\\begin{definition}[Codon Resonance Matrix (MRK)]
+\\begin{definition}[KyriosMICA Resonance Matrix (MRK) (MRK)]
 For a codon with bases $B_1, B_2, B_3$ of dimensions $n_1, n_2, n_3$, and
 state vector $\\mathbf{v} \\in \\mathcal{T}_3^n$ ($n = n_1+n_2+n_3$), the
 $n \\times n$ MRK is constructed by blocks:

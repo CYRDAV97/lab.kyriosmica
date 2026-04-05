@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>T₃-Net · IA Conformationnelle · kyriosMICA</title>
+<title>T₃-Net · kyriosMICA · EVK · ERK · MRK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Syne:wght@400;600;700;800&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
 <style>
@@ -411,7 +411,7 @@ header {
     </div>
   </div>
   <div class="hdr-right">
-    <span class="hdr-badge">T₃-Net v2.0</span>
+    <span class="hdr-badge">kyriosMICA · T₃-Net v2.0</span>
     <a href="https://lab.kyriosmica.com" target="_blank" id="lab-link"
        style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);
               color:var(--purple);padding:4px 10px;border-radius:3px;font-size:9px;
@@ -553,7 +553,7 @@ header {
           <div class="pipe-arrow"></div>
           <div class="pipe-step" id="pipe-3">
             <div class="pipe-dot">3</div>
-            <div class="pipe-label">EVK</div>
+            <div class="pipe-label">EVK<span style='font-size:7px;color:rgba(34,211,238,.4);display:block;letter-spacing:1px;'>Kyriosmica</span></div>
           </div>
           <div class="pipe-arrow"></div>
           <div class="pipe-step" id="pipe-4">
@@ -589,7 +589,7 @@ header {
       <div class="card fade-in" id="conf-card">
         <div class="card-header">
           <div class="card-step" style="border-color:var(--green);color:var(--green);">5</div>
-          <div class="card-title" style="color:var(--green);">Prédiction de Conformation</div>
+          <div class="card-title" style="color:var(--green);">Prédiction Conformationnelle · kyriosMICA</div>
           <span id="mode-badge" style="font-size:7px;letter-spacing:1px;
             padding:2px 6px;border-radius:2px;background:rgba(167,139,250,.1);
             border:1px solid rgba(167,139,250,.25);color:var(--purple);">argmax</span>
@@ -626,7 +626,7 @@ header {
       <div class="card fade-in">
         <div class="card-header">
           <div class="card-step" style="border-color:var(--gold);color:var(--gold);">M</div>
-          <div class="card-title" style="color:var(--gold);">Métriques Qudits-36</div>
+          <div class="card-title" style="color:var(--gold);">Métriques Qudits-36 · kyriosMICA</div>
         </div>
         <div class="card-body">
           <div class="results-grid" id="metrics-grid"></div>
@@ -637,7 +637,7 @@ header {
       <div class="card fade-in">
         <div class="card-header">
           <div class="card-step" style="border-color:var(--purple);color:var(--purple);">3/4</div>
-          <div class="card-title" style="color:var(--purple);">Signatures EVK · ERK · MRK par codon</div>
+          <div class="card-title" style="color:var(--purple);">Signatures EVK · ERK · MRK · kyriosMICA par codon</div>
         </div>
         <div class="card-body" style="padding:0;">
           <div id="codon-table-wrap"></div>
@@ -661,7 +661,7 @@ header {
 </div>
 
 <div class="attribution">
-  T₃-Net v2.0 · kyriosMICA · © 2026 Cyrille Egnon DAVOH · Bénin, Afrique de l'Ouest · Decoding Life. Encoding the Future.
+  kyriosMICA · T₃-Net v2.0 · EVK · ERK · MRK · Qudits-36 · © 2026 Cyrille Egnon DAVOH · Bénin · Decoding Life. Encoding the Future.
 </div>
 
 <script>
@@ -796,7 +796,7 @@ function computeMRK(evk) {
 
 // ── Step 5: Classify ─────────────────────────────────────────────
 const CONFORMATIONS = [
-  {name:'B-form · pH 7.4',    label:'B-form',  icon:'🧬', color:'#22D3EE'},
+  {name:'B-form (pH 7.4)',    label:'B-form',  icon:'🧬', color:'#22D3EE'},
   {name:'A-form · déshydraté', label:'A-form',  icon:'⚗️', color:'#A78BFA'},
   {name:'Stress acide · pH 5.4',label:'Stress', icon:'⚡', color:'#F59E0B'},
 ];
@@ -982,9 +982,9 @@ function renderResults(result) {
   // Metrics grid
   const mg = document.getElementById('metrics-grid');
   mg.innerHTML = [
-    {l:'Rang MRK moyen', v:result.avgRank, c:'var(--cyan)'},
-    {l:'Frobenius moyen', v:result.avgFrob, c:'var(--purple)'},
-    {l:'Énergie ERK', v:result.avgE+' kcal/mol', c:'var(--gold)'},
+    {l:'Rang MRK · kyriosMICA', v:result.avgRank, c:'var(--cyan)'},
+    {l:'Frobenius MRK · kyriosMICA', v:result.avgFrob, c:'var(--purple)'},
+    {l:'Énergie ERK · kyriosMICA', v:result.avgE+' kcal/mol', c:'var(--gold)'},
     {l:'États −1 (%)', v:(result.fracNeg*100).toFixed(0)+'%', c:'var(--red)'},
     {l:'États 0 (%)', v:((1-result.fracNeg-result.fracPos)*100).toFixed(0)+'%', c:'#818CF8'},
     {l:'États +1 (%)', v:(result.fracPos*100).toFixed(0)+'%', c:'var(--cyan)'},
@@ -1086,7 +1086,7 @@ function openInLab() {
   if (!seq) { alert('Analysez d\'abord une séquence avant d\'ouvrir le Lab.'); return; }
 
   var pred = window._lastResult
-    ? ['B-form · pH 7.4','A-form · déshydraté','Stress acide · pH 5.4'][window._lastResult.pred] || ''
+    ? ['B-form (pH 7.4)','A-form · déshydraté','Stress acide · pH 5.4'][window._lastResult.pred] || ''
     : '';
 
   // Si dans le portail kyriosMICA → envoyer message au parent
