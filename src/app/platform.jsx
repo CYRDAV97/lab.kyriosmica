@@ -49,46 +49,127 @@ function v2i(v) { return v.reduce((a, tt) => a * 3 + (tt + 1), 0); }
 function serVec(vecs) { return vecs.map(v => v.join(",")).join("|"); }
 function parseVec(s) { return s.trim().split("|").map(b => b.split(",").map(Number)); }
 
-// ═══ 3D DNA ══════════════════════════════════════════════════════
+// ═══ 3D DNA — Adaptive helix with risk coloring ══════════════════
 function DNA3D({ codons, sigma, h: H }) {
   const ref = useRef(null);
   useEffect(() => {
     if (!ref.current) return;
-    const W = ref.current.clientWidth, Hh = H || 220;
+    const W = ref.current.clientWidth, Hh = H || 260;
     const sc = new THREE.Scene(); sc.background = new THREE.Color(parseInt(P.bg.slice(1), 16));
-    const cam = new THREE.PerspectiveCamera(45, W / Hh, 0.1, 500); cam.position.set(0, 0, 42);
-    const ren = new THREE.WebGLRenderer({ antialias: true }); ren.setSize(W, Hh); ren.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const cam = new THREE.PerspectiveCamera(40, W / Hh, 0.1, 2000);
+    const ren = new THREE.WebGLRenderer({ antialias: true, alpha: true }); ren.setSize(W, Hh); ren.setPixelRatio(Math.min(devicePixelRatio, 2));
     ref.current.innerHTML = ""; ref.current.appendChild(ren.domElement);
-    sc.add(new THREE.AmbientLight(0x1a2030, 0.8));
-    const d1 = new THREE.DirectionalLight(0xffffff, 0.7); d1.position.set(8, 12, 10); sc.add(d1);
-    const pl = new THREE.PointLight(parseInt(P.cy.slice(1), 16), 0.25, 60); pl.position.set(-5, 0, 10); sc.add(pl);
+
+    // Lighting — professional 3-point
+    sc.add(new THREE.AmbientLight(0x1a2840, 1.0));
+    const key = new THREE.DirectionalLight(0xffffff, 0.8); key.position.set(10, 15, 12); sc.add(key);
+    const fill = new THREE.DirectionalLight(0x22d3ee, 0.2); fill.position.set(-8, 5, -10); sc.add(fill);
+    const rim = new THREE.PointLight(0xC9972A, 0.3, 100); rim.position.set(0, -10, 15); sc.add(rim);
+
     const grp = new THREE.Group(); sc.add(grp);
-    const bases = codons ? codons.flatMap(c => (c.codon || c).split("")) : "ATCGATCGATCG".split("");
-    const nb = Math.min(bases.length, 42), sg = new THREE.SphereGeometry(0.42, 10, 10);
-    const mAT = new THREE.MeshStandardMaterial({ color: 0xfb923c, roughness: 0.3 });
-    const mCG = new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: 0.3 });
-    const mBd = new THREE.MeshStandardMaterial({ color: 0xC9972A, transparent: true, opacity: 0.35 });
-    const mBB = new THREE.MeshStandardMaterial({ color: 0x3a4a5e, roughness: 0.6 });
-    const rd = 5, pit = 0.9, sig = sigma || -0.06;
-    for (let i = 0; i < nb; i++) {
-      const a = (i / 10.5) * Math.PI * 2 * (1 + sig * 0.5), y = (i - nb / 2) * pit;
-      const x1 = rd * Math.cos(a), z1 = rd * Math.sin(a), x2 = rd * Math.cos(a + Math.PI), z2 = rd * Math.sin(a + Math.PI);
-      const isCG = "CG".includes(bases[i]);
-      const m1 = new THREE.Mesh(sg, isCG ? mCG : mAT); m1.position.set(x1, y, z1); grp.add(m1);
-      const m2 = new THREE.Mesh(sg, isCG ? mCG : mAT); m2.position.set(x2, y, z2); grp.add(m2);
-      const len = Math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2);
-      const bd = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, len * .55, 4), mBd);
-      bd.position.set((x1 + x2) / 2, y, (z1 + z2) / 2); bd.lookAt(x2, y, z2); bd.rotateX(Math.PI / 2); grp.add(bd);
-      if (i > 0) { const pa = ((i - 1) / 10.5) * Math.PI * 2 * (1 + sig * 0.5), py = (i - 1 - nb / 2) * pit; [[Math.cos(pa) * rd, Math.sin(pa) * rd, x1, z1], [Math.cos(pa + Math.PI) * rd, Math.sin(pa + Math.PI) * rd, x2, z2]].forEach(([px, pz, cx, cz]) => { const l = Math.sqrt((cx - px) ** 2 + pit ** 2 + (cz - pz) ** 2); const bb = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, l, 4), mBB); bb.position.set((px + cx) / 2, (py + y) / 2, (pz + cz) / 2); bb.lookAt(cx, y, cz); bb.rotateX(Math.PI / 2); grp.add(bb); }); }
+
+    // Extract bases and risk info from codons
+    const codonList = codons && codons.length > 0 ? codons : null;
+    let bases = [], riskColors = [];
+    if (codonList) {
+      codonList.forEach(c => {
+        const codonStr = (c.codon || c || "").toString();
+        const risk = c.risk_level || "LOW";
+        const col = risk === "HIGH" ? 0xe85454 : risk === "MEDIUM" ? 0xf59e0b : null;
+        codonStr.split("").forEach(b => { bases.push(b); riskColors.push(col); });
+      });
+    } else {
+      bases = "ATCGATCGATCGATCGATCG".split("");
+      riskColors = bases.map(() => null);
     }
-    let drag = false, px = 0, ry = 0;
-    ren.domElement.onmousedown = e => { drag = true; px = e.clientX; };
-    ren.domElement.onmousemove = e => { if (drag) { ry += (e.clientX - px) * .008; px = e.clientX; } };
+
+    // Adaptive: show all bases up to 600, then sample evenly
+    const totalBases = bases.length;
+    const maxDisplay = 600;
+    let displayBases = bases, displayRisk = riskColors;
+    if (totalBases > maxDisplay) {
+      const step = Math.ceil(totalBases / maxDisplay);
+      displayBases = []; displayRisk = [];
+      for (let i = 0; i < totalBases; i += step) { displayBases.push(bases[i]); displayRisk.push(riskColors[i]); }
+    }
+    const nb = displayBases.length;
+
+    // Adaptive geometry — smaller spheres for longer sequences
+    const sphereR = nb > 200 ? 0.25 : nb > 80 ? 0.35 : 0.45;
+    const sg = new THREE.SphereGeometry(sphereR, nb > 200 ? 6 : 10, nb > 200 ? 6 : 10);
+
+    // Materials
+    const mAT = new THREE.MeshStandardMaterial({ color: 0xfb923c, roughness: 0.25, metalness: 0.1 });
+    const mCG = new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: 0.25, metalness: 0.1 });
+    const mHIGH = new THREE.MeshStandardMaterial({ color: 0xe85454, roughness: 0.15, metalness: 0.2, emissive: 0xe85454, emissiveIntensity: 0.3 });
+    const mMED = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.2, metalness: 0.15, emissive: 0xf59e0b, emissiveIntensity: 0.15 });
+    const mBond = new THREE.MeshStandardMaterial({ color: 0xC9972A, transparent: true, opacity: 0.3, roughness: 0.5 });
+    const mBack = new THREE.MeshStandardMaterial({ color: 0x2a3a50, roughness: 0.7, metalness: 0.05 });
+
+    // Helix parameters — adaptive pitch
+    const rd = nb > 200 ? 3.5 : 5;
+    const pit = nb > 200 ? 0.5 : nb > 80 ? 0.7 : 0.9;
+    const sig = sigma || -0.06;
+    const turnsPerBase = 1 / 10.5;
+
+    for (let i = 0; i < nb; i++) {
+      const angle = i * turnsPerBase * Math.PI * 2 * (1 + sig * 0.5);
+      const y = (i - nb / 2) * pit;
+      const x1 = rd * Math.cos(angle), z1 = rd * Math.sin(angle);
+      const x2 = rd * Math.cos(angle + Math.PI), z2 = rd * Math.sin(angle + Math.PI);
+      const isCG = "CG".includes(displayBases[i]);
+
+      // Pick material — risk color overrides base color
+      let mat;
+      if (displayRisk[i] === 0xe85454) mat = mHIGH;
+      else if (displayRisk[i] === 0xf59e0b) mat = mMED;
+      else mat = isCG ? mCG : mAT;
+
+      const m1 = new THREE.Mesh(sg, mat); m1.position.set(x1, y, z1); grp.add(m1);
+      const m2 = new THREE.Mesh(sg, isCG ? mCG : mAT); m2.position.set(x2, y, z2); grp.add(m2);
+
+      // H-bond between pair
+      const len = Math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2);
+      const bondR = nb > 200 ? 0.03 : 0.05;
+      const bd = new THREE.Mesh(new THREE.CylinderGeometry(bondR, bondR, len * 0.55, 4), mBond);
+      bd.position.set((x1 + x2) / 2, y, (z1 + z2) / 2); bd.lookAt(x2, y, z2); bd.rotateX(Math.PI / 2); grp.add(bd);
+
+      // Backbone
+      if (i > 0) {
+        const pa = (i - 1) * turnsPerBase * Math.PI * 2 * (1 + sig * 0.5);
+        const py = (i - 1 - nb / 2) * pit;
+        const backR = nb > 200 ? 0.05 : 0.09;
+        [[Math.cos(pa) * rd, Math.sin(pa) * rd, x1, z1], [Math.cos(pa + Math.PI) * rd, Math.sin(pa + Math.PI) * rd, x2, z2]].forEach(([px2, pz, cx, cz]) => {
+          const l = Math.sqrt((cx - px2) ** 2 + pit ** 2 + (cz - pz) ** 2);
+          const bb = new THREE.Mesh(new THREE.CylinderGeometry(backR, backR, l, 4), mBack);
+          bb.position.set((px2 + cx) / 2, (py + y) / 2, (pz + cz) / 2); bb.lookAt(cx, y, cz); bb.rotateX(Math.PI / 2); grp.add(bb);
+        });
+      }
+    }
+
+    // Adaptive camera position
+    const helixHeight = nb * pit;
+    const camDist = Math.max(helixHeight * 0.4, 30);
+    cam.position.set(0, 0, camDist);
+
+    // Interaction — drag rotate + scroll zoom
+    let drag = false, px2 = 0, ry = 0, zoom = camDist;
+    ren.domElement.onmousedown = e => { drag = true; px2 = e.clientX; };
+    ren.domElement.onmousemove = e => { if (drag) { ry += (e.clientX - px2) * .006; px2 = e.clientX; } };
     ren.domElement.onmouseup = ren.domElement.onmouseleave = () => drag = false;
-    let f; const anim = () => { f = requestAnimationFrame(anim); if (!drag) ry += .003; grp.rotation.y = ry; grp.rotation.x = 0.15; ren.render(sc, cam); }; anim();
+    ren.domElement.onwheel = e => { zoom = Math.max(15, Math.min(camDist * 3, zoom + e.deltaY * 0.05)); e.preventDefault(); };
+    ren.domElement.ontouchstart = e => { if (e.touches.length === 1) { drag = true; px2 = e.touches[0].clientX; } };
+    ren.domElement.ontouchmove = e => { if (drag && e.touches.length === 1) { ry += (e.touches[0].clientX - px2) * .006; px2 = e.touches[0].clientX; } };
+    ren.domElement.ontouchend = () => drag = false;
+
+    let f; const anim = () => { f = requestAnimationFrame(anim); if (!drag) ry += .002; grp.rotation.y = ry; grp.rotation.x = 0.12; cam.position.z = zoom; ren.render(sc, cam); }; anim();
     return () => { cancelAnimationFrame(f); ren.dispose(); };
   }, [codons, sigma, H]);
-  return <div ref={ref} style={{ width: "100%", height: H || 220, borderRadius: 12, overflow: "hidden", border: `1px solid ${P.brd}` }} />;
+  return <div ref={ref} style={{ width: "100%", height: H || 260, borderRadius: 14, overflow: "hidden", border: `1px solid ${P.brd}`, cursor: "grab" }}>
+    <div style={{ position: "absolute", bottom: 6, right: 10, fontSize: 7, color: P.tf, ...cs.fn, pointerEvents: "none" }}>
+      {codons?.length ? `${codons.length} codons` : ""} · drag · scroll
+    </div>
+  </div>;
 }
 
 // ═══ Environment Panel (Na⁺/K⁺/Mg²⁺ separate) ══════════════════
@@ -160,7 +241,7 @@ function Analyseur({ onResults, lang, seqName, setSeqName }) {
       {cd.monte_carlo && <div style={cs.card(P.org + "12")}><div style={cs.lbl(P.org)}>Monte Carlo · {cd.monte_carlo.N_simulations} · Bell/GHZ={String(cd.monte_carlo.bell_ghz_filter)}</div><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}><Stat label="Rang MC" value={`${cd.monte_carlo.rank_mean}±${cd.monte_carlo.rank_std}`} color={P.org} /><Stat label="H(rank)" value={`${cd.monte_carlo.H_rank_bits}b`} color={P.pur} /><Stat label="n_eff" value={cd.monte_carlo.n_eff_conformations} color={P.cy} /></div></div>}
     </>}
     {/* SEQUENCE */}
-    {mode === "sequence" && summary && <><DNA3D codons={codons} sigma={env.supercoiling_density} h={200} /><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 6, margin: "8px 0 10px" }}><Stat label={t(lang, "codons")} value={summary.n_codons || 0} color={P.cy} /><Stat label="MRK" value={summary.mrk_rank_mean || "—"} color={P.gold} sub={summary.mrk_rank_std ? `±${summary.mrk_rank_std}` : ""} /><Stat label="ν_TIV" value={summary.nu_TIV_mean ? `${summary.nu_TIV_mean}THz` : "—"} color={P.pur} /><Stat label="GC%" value={summary.gc_content_pct != null ? `${summary.gc_content_pct}%` : "—"} color={P.grn} /><Stat label="HIGH" value={summary.high_risk_sites ?? 0} color={P.red} /><Stat label="MIH-21" value={summary.n_mih21_windows ?? 0} color={P.org} /><Stat label="I (mol/L)" value={summary.conditions?.ionic_strength_mol_L || summary.conditions?.ionic_strength || "—"} color={P.pur} sub={`Na⁺=${summary.conditions?.sodium_mM ?? "?"} K⁺=${summary.conditions?.potassium_mM ?? "?"}`} />{data.compute_time_s && <Stat label="API" value={`${data.compute_time_s}s`} color={P.td} />}</div>
+    {mode === "sequence" && summary && <><DNA3D codons={codons} sigma={env.supercoiling_density} h={300} /><div style={{ display: "flex", justifyContent: "center", gap: 14, padding: "4px 0 8px", ...cs.fn, fontSize: 8 }}><span><span style={{ color: "#fb923c" }}>●</span> AT</span><span><span style={{ color: "#22d3ee" }}>●</span> CG</span><span><span style={{ color: "#e85454" }}>●</span> HIGH</span><span><span style={{ color: "#f59e0b" }}>●</span> MED</span></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 6, margin: "4px 0 10px" }}><Stat label={t(lang, "codons")} value={summary.n_codons || 0} color={P.cy} /><Stat label="MRK" value={summary.mrk_rank_mean || "—"} color={P.gold} sub={summary.mrk_rank_std ? `±${summary.mrk_rank_std}` : ""} /><Stat label="ν_TIV" value={summary.nu_TIV_mean ? `${summary.nu_TIV_mean}THz` : "—"} color={P.pur} /><Stat label="GC%" value={summary.gc_content_pct != null ? `${summary.gc_content_pct}%` : "—"} color={P.grn} /><Stat label="HIGH" value={summary.high_risk_sites ?? 0} color={P.red} /><Stat label="MIH-21" value={summary.n_mih21_windows ?? 0} color={P.org} /><Stat label="I (mol/L)" value={summary.conditions?.ionic_strength_mol_L || summary.conditions?.ionic_strength || "—"} color={P.pur} sub={`Na⁺=${summary.conditions?.sodium_mM ?? "?"} K⁺=${summary.conditions?.potassium_mM ?? "?"}`} />{data.compute_time_s && <Stat label="API" value={`${data.compute_time_s}s`} color={P.td} />}</div>
       <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>{[["overview", t(lang, "ov")], ["codons", t(lang, "codons")], ["risk", t(lang, "mut")], ["mih21", "MIH-21"]].map(([id, l]) => <button key={id} onClick={() => setTab(id)} style={{ ...cs.btn(tab === id ? P.cy : P.td), fontSize: 10, background: tab === id ? P.cg : "transparent" }}>{l}</button>)}</div>
       {tab === "overview" && <div style={cs.card(P.grn + "10")}><div style={cs.lbl(P.grn)}>TQIM-Davoh v3 · Bell/GHZ · MPS</div><div style={{ ...cs.fn, fontSize: 11, lineHeight: 2.2, color: P.tx }}><div><span style={{ color: P.red, fontWeight: 600 }}>{t(lang, "postI")}</span> · α(−1)={summary.amplitudes?.alpha_minus1 ?? "—"} α(0)={summary.amplitudes?.alpha_0 ?? "—"} α(+1)={summary.amplitudes?.alpha_plus1 ?? "—"}</div><div><span style={{ color: P.org, fontWeight: 600 }}>{t(lang, "postII")}</span> · {summary.n_mih21_windows ?? 0} MIH-21 · L=71.4Å</div><div><span style={{ color: P.pur, fontWeight: 600 }}>{t(lang, "postIII")}</span> · ν_TIV={summary.nu_TIV_mean ?? "—"}THz · E_res={summary.E_res_mean ?? "—"}kcal/mol</div><div><span style={{ color: P.red, fontWeight: 600 }}>{t(lang, "postIV")}</span> · {summary.high_risk_sites ?? 0} HIGH · {summary.medium_risk_sites ?? 0} MED · {summary.low_risk_sites ?? 0} LOW</div><div style={{ marginTop: 6, color: P.tf, fontSize: 9 }}>T={summary.conditions?.T_K ?? "?"}K pH={summary.conditions?.pH ?? "?"} Na⁺={summary.conditions?.sodium_mM ?? "?"}mM K⁺={summary.conditions?.potassium_mM ?? "?"}mM Mg²⁺={summary.conditions?.magnesium_mM ?? "?"}mM σ={summary.conditions?.supercoiling ?? "?"} {summary.conditions?.force_field || "CHARMM36"}</div></div></div>}
       {tab === "codons" && <div style={{ ...cs.card(), overflow: "auto", maxHeight: 400 }}><table style={{ width: "100%", borderCollapse: "collapse", ...cs.fn, fontSize: 10 }}><thead><tr style={{ borderBottom: `1px solid ${P.ba}` }}>{["#", "Cod", "AA", "EVK", "Rk", "ν_TIV", "ERK", "Thermo", "Risk", "P%", "MPS"].map(h => <th key={h} style={{ padding: "3px 4px", color: P.td, textAlign: "left", fontSize: 8 }}>{h}</th>)}</tr></thead><tbody>{codons.map((c, i) => <tr key={i} style={{ borderBottom: `1px solid ${P.brd}` }}><td style={{ padding: "2px 4px", color: P.tf }}>{c.position}</td><td style={{ padding: "2px 4px", color: P.tx, fontWeight: 600 }}>{c.codon}</td><td style={{ padding: "2px 4px", color: P.pur }}>{c.amino_acid}</td><td style={{ padding: "2px 4px", color: P.td }}>{c.evk_label}</td><td style={{ padding: "2px 4px", color: P.gold, fontWeight: 600 }}>{c.rank}</td><td style={{ padding: "2px 4px", color: P.pur }}>{c.nu_TIV_THz}</td><td style={{ padding: "2px 4px", color: P.pur }}>{c.erk_energy}</td><td style={{ padding: "2px 4px", color: c.thermo_class === "tendu" ? P.red : c.thermo_class === "perturbé" ? P.amb : P.grn }}>{c.thermo_class}</td><td style={{ padding: "2px 4px", color: c.risk_level === "HIGH" ? P.red : c.risk_level === "MEDIUM" ? P.amb : P.grn, fontWeight: 600 }}>{c.risk_level}</td><td style={{ padding: "2px 4px", color: P.red }}>{c.P_mut_pct}</td><td style={{ padding: "2px 4px", color: P.cy }}>{c.mps_entropy != null ? `${c.mps_entropy}b` : "—"}</td></tr>)}</tbody></table></div>}
