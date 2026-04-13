@@ -196,7 +196,7 @@ const NR3C1 = "ATGGACTCCAAAGAATCATTAACTCCTGGTAGAGAAGAAAACCCCAGCAGTGTGCTTGCTCAGGA
 // ═══ ANALYSEUR ════════════════════════════════════════════════════
 function Analyseur({ onResults, lang, seqName, setSeqName }) {
   const [mode, setMode] = useState("sequence");
-  const [seq, setSeq] = useState(NR3C1);
+  const [seq, setSeq] = useState("");
   const [codon, setCodon] = useState("CGC");
   const [env, setEnv] = useState(defEnv());
   const [methStr, setMethStr] = useState("");
@@ -208,9 +208,12 @@ function Analyseur({ onResults, lang, seqName, setSeqName }) {
   const [tab, setTab] = useState("overview");
   useEffect(() => { fetch(`${API}/health`).then(r => r.ok ? setOnline(true) : setOnline(false)).catch(() => setOnline(false)); }, []);
   const mods = parseMeth(methStr);
+  // Auto-clean: strip FASTA headers, whitespace, numbers, newlines → only ATCG
+  const cleanSeq = seq.split("\n").filter(l => !l.startsWith(">")).join("").replace(/[^ATCGatcg]/g, "").toUpperCase();
+  const nNt = cleanSeq.length, nCodons = Math.floor(nNt / 3);
   const payload = mode === "codon"
     ? { codon, conditions: env, topology: { supercoiling_density: env.supercoiling_density, form: "B-DNA" }, epigenetics: mods.length ? mods : undefined, mc_samples: runMC ? 500 : 100 }
-    : { sequence: seq, conditions: env, topology: { supercoiling_density: env.supercoiling_density, form: "B-DNA" }, epigenetics: mods.length ? mods : undefined, analysis: { force_field: "CHARMM36", run_mc: runMC, mc_samples: 500 } };
+    : { sequence: cleanSeq, conditions: env, topology: { supercoiling_density: env.supercoiling_density, form: "B-DNA" }, epigenetics: mods.length ? mods : undefined, analysis: { force_field: "CHARMM36", run_mc: runMC, mc_samples: 500 } };
   async function run() {
     setLoading(true); setError(null); setData(null);
     try {
@@ -227,12 +230,12 @@ function Analyseur({ onResults, lang, seqName, setSeqName }) {
       <div style={{ flex: 1 }} /><div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: P.td, ...cs.fn }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: online ? P.grn : online === false ? P.red : P.tf, display: "inline-block" }} /> {online ? t(lang, "on") : t(lang, "off")}</div>
     </div>
     {mode === "codon" ? <div style={cs.card()}><div style={cs.lbl()}>{t(lang, "codonIn")}</div><input value={codon} onChange={e => { setCodon(e.target.value.toUpperCase().slice(0, 3)); setData(null); }} maxLength={3} style={{ ...cs.input, fontSize: 28, fontWeight: 700, textAlign: "center", letterSpacing: 12, padding: "14px 20px" }} /></div>
-      : <><div style={cs.card()}><div style={cs.lbl()}>{lang === "en" ? "Sequence name (gene / protein)" : "Nom de la séquence (gène / protéine)"}</div><input value={seqName} onChange={e => setSeqName(e.target.value)} placeholder="NR3C1, BRCA1, TP53, SARS-CoV-2 Spike..." style={{ ...cs.input, fontSize: 14, fontWeight: 600, color: P.gold }} /></div><div style={cs.card()}><div style={cs.lbl()}>{t(lang, "seq")}</div><textarea value={seq} onChange={e => { setSeq(e.target.value); setData(null); }} rows={4} style={{ ...cs.input, resize: "vertical", lineHeight: 1.5 }} /></div></>}
+      : <><div style={cs.card()}><div style={cs.lbl()}>{lang === "en" ? "Sequence name (gene / protein)" : "Nom de la séquence (gène / protéine)"}</div><input value={seqName} onChange={e => setSeqName(e.target.value)} placeholder="NR3C1, BRCA1, TP53, SARS-CoV-2 Spike..." style={{ ...cs.input, fontSize: 14, fontWeight: 600, color: P.gold }} /></div><div style={cs.card()}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={cs.lbl()}>{t(lang, "seq")}</div><div style={{ ...cs.fn, fontSize: 10, color: nCodons >= 1 ? P.cy : P.tf, fontWeight: nCodons >= 100 ? 700 : 400 }}>{nNt} nt · {nCodons} codons</div></div><textarea value={seq} onChange={e => { setSeq(e.target.value); setData(null); }} rows={5} placeholder={lang === "en" ? "Paste the complete CDS here (FASTA or raw nucleotides)...\nThe engine analyzes ALL codons without any limit." : "Collez le CDS complet ici (FASTA ou nucléotides bruts)...\nLe moteur analyse TOUS les codons sans aucune limite."} style={{ ...cs.input, resize: "vertical", lineHeight: 1.5 }} /></div></>}
     <EnvPanel env={env} setEnv={setEnv} lang={lang} />
     <div style={cs.card(P.red + "12")}><div style={cs.lbl(P.red)}>{t(lang, "epi")}</div><input value={methStr} onChange={e => setMethStr(e.target.value)} placeholder="1:5mC, 5:m6A, 12:5hmC" style={cs.input} /><div style={{ color: P.tf, fontSize: 8, marginTop: 3, ...cs.fn }}>{t(lang, "methFmt")}</div></div>
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}><label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: P.td, cursor: "pointer", ...cs.fn }}><input type="checkbox" checked={runMC} onChange={e => setRunMC(e.target.checked)} style={{ accentColor: P.gold }} /> {t(lang, "mc")}</label><div style={{ fontSize: 9, color: P.tf, ...cs.fn }}>{t(lang, "bell")}</div></div>
     <details style={{ marginBottom: 10 }}><summary style={{ color: P.td, fontSize: 10, cursor: "pointer", ...cs.fn }}>{t(lang, "payload")} → {mode === "codon" ? "POST /codon" : "POST /analyze"}</summary><pre style={{ background: P.bg, padding: 10, borderRadius: 8, fontSize: 9, color: P.tf, overflow: "auto", maxHeight: 120, border: `1px solid ${P.brd}` }}>{JSON.stringify(payload, null, 2)}</pre></details>
-    <button onClick={run} disabled={loading} style={{ width: "100%", marginBottom: 14, padding: "13px 0", borderRadius: 10, border: "none", background: `linear-gradient(135deg,${P.gold},${P.cd2})`, color: P.bg, fontWeight: 800, fontSize: 13, cursor: loading ? "wait" : "pointer", ...cs.fn, letterSpacing: 1.5, opacity: loading ? .7 : 1 }}>{loading ? t(lang, "going") : t(lang, "go")}</button>
+    <button onClick={run} disabled={loading || (mode === "sequence" && nCodons < 1)} style={{ width: "100%", marginBottom: 14, padding: "13px 0", borderRadius: 10, border: "none", background: `linear-gradient(135deg,${P.gold},${P.cd2})`, color: P.bg, fontWeight: 800, fontSize: 13, cursor: loading ? "wait" : "pointer", ...cs.fn, letterSpacing: 1.5, opacity: loading ? .7 : (mode === "sequence" && nCodons < 1) ? .4 : 1 }}>{loading ? t(lang, "going") : mode === "sequence" && nCodons > 0 ? `${t(lang, "go")} · ${nCodons} CODONS` : t(lang, "go")}</button>
     {error && <div style={{ ...cs.card(P.red + "30"), color: P.red, fontSize: 11, ...cs.fn }}>{error}</div>}
     {/* CODON */}
     {mode === "codon" && cd && cd.evk && <><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 6, marginBottom: 10 }}><Stat label="EVK" value={`T₃${cd.evk.dim}`} color={P.pur} sub={cd.evk.label} /><Stat label={t(lang, "rank")} value={cd.mrk_invariants?.rank} color={P.gold} sub={cd.mrk_invariants?.risk_level} /><Stat label="ν_TIV" value={`${cd.mrk_invariants?.nu_TIV_THz}THz`} color={P.pur} /><Stat label="E_res" value={cd.mrk_invariants?.E_res} color={P.org} sub="kcal/mol" /><Stat label="P(mut)" value={`${cd.mutability?.P_mut_pct}%`} color={P.red} /><Stat label="MPS n_eff" value={cd.mps?.n_eff_conformations} color={P.cy} sub="conformations" /></div>
